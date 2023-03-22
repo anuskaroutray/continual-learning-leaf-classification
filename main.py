@@ -30,7 +30,7 @@ if __name__ == "__main__":
     ap.add_argument("--loss-function", default = "cross_entropy_loss", type = str)
     ap.add_argument("--num-workers", default = 1, type = int)
     ap.add_argument("--scheduler", default = "CosineAnnealingScheduler", type = str)
-    ap.add_argument("--epochs", default = 3, type = int)
+    ap.add_argument("--epochs", default = 5, type = int)
 
 
     ap.add_argument("--incremental-learning", default = True, type = bool)
@@ -51,10 +51,7 @@ if __name__ == "__main__":
     train_dataset = DeepHerbDataset(args.data_dir, num_classes = args.num_classes, mode = "train")
     test_dataset = DeepHerbDataset(args.data_dir, num_classes = args.num_classes, mode = "test")
 
-    if args.model_name == "resnet50":
-        model = BaselineModel(args.model_name, pretrained = args.pretrained, num_classes = args.num_classes)
-    elif args.model_name == "vgg19":
-        model = BaselineModel(args.model_name, pretrained = args.pretrained, num_classes = args.num_classes)
+    model = BaselineModel(args.model_name, pretrained = args.pretrained, num_classes = args.num_classes)
         
     device = "cuda" if torch.cuda.is_available() else "cpu"
     optimizer = torch.optim.Adam(model.parameters(), lr = float(args.lr), weight_decay = float(args.weight_decay))
@@ -75,12 +72,14 @@ if __name__ == "__main__":
         print(f"\nTrain metrics: {train_metrics}")
         print(f"\nTest metrics: {test_metrics}\n")
 
-    else:
+    elif args.incremental_learning:
 
         class_order = np.random.permutation(args.num_classes)
 
-        train_dataset, train_class_list = class_incremental_dataset(train_dataset, class_order, is_train = True, num_base_classes = args.num_base_classes, increment = args.increment)
-        test_dataset, test_class_list = class_incremental_dataset(test_dataset, class_order, is_train = False, num_base_classes = args.num_base_classes, increment = args.increment)
+        train_dataset, train_class_list = class_incremental_dataset(train_dataset, class_order, is_train = True, 
+                                                                    num_base_classes = args.num_base_classes, increment = args.increment)
+        test_dataset, test_class_list = class_incremental_dataset(test_dataset, class_order, is_train = False, 
+                                                                    num_base_classes = args.num_base_classes, increment = args.increment)
 
         train_dataloader = [DataLoader(data, batch_size = args.batch_size, shuffle = True, num_workers = args.num_workers) for data in train_dataset]
         test_dataloader = [DataLoader(data, batch_size = args.batch_size, shuffle = False, num_workers = args.num_workers) for data in test_dataset]

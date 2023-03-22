@@ -42,7 +42,6 @@ class DeepHerbDataset(Dataset):
             self.data_path = os.path.join(self.data_dir, f"{mode}-leaf-data.csv")
 
         self.df.reset_index(inplace = True)
-        
         self.transform = transforms.Compose([transforms.ToTensor(),
                                              transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                                              transforms.CenterCrop(224)])
@@ -55,6 +54,4 @@ class DeepHerbDataset(Dataset):
         image = np.array(Image.open(self.df["image_path"][idx], mode = "r"), dtype = np.float32)
         image = self.transform(image)
         label = self.df["label"][idx]
-
-        # TODO: Add data augmentation
         return image, label

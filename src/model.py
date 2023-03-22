@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from torchvision.models import resnet50, vgg19
+from torchvision.models import resnet50, vgg19, inception_v3, densenet121
 
 class BaselineModel(nn.Module):
 
@@ -13,18 +13,21 @@ class BaselineModel(nn.Module):
         self.num_classes = num_classes
 
         if self.model_name == "resnet50":
-            self.model = resnet50(pretrained = pretrained)
+            self.model = resnet50(pretrained = self.pretrained)
             self.model.fc = nn.Linear(2048, self.num_classes, bias = True)
 
         elif self.model_name == "inceptionv3":
-            raise NotImplementedError
+            self.model = inception_v3(pretrained = self.pretrained)
+            self.model.fc = nn.Linear(2048, self.num_classes, bias = True)
 
         elif self.model_name == "vgg19":
-            self.model = vgg19(pretrained = pretrained)
+            self.model = vgg19(pretrained = self.pretrained)
             self.model.classifier[6] = nn.Linear(4096, self.num_classes, bias = True)
         
         elif self.model_name == "densenet":
-            raise NotImplementedError
+            self.model = densenet121(pretrained = self.pretrained)
+            self.classifier = nn.Linear(1024, self.num_classes, bias=True)
+
 
         # NOTE: Implement some more layers here later
         

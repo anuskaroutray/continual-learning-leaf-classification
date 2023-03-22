@@ -59,18 +59,7 @@ class Trainer():
 
             if self.scheduler is not None:
                 self.scheduler.step()
-            
-            # if ((val_dataloader is not None) and (((epoch + 1) % self.config.training.evaluate_every)) == 0):
-            #     val_loss = self.evaluate(val_dataloader)
                 
-            #     if self.best_val_loss >= val_loss and self.config.save_model_optimizer:
-            #       self.best_val_loss = val_loss
-            #       print(f"Saving best model and optimizer at checkpoints/{self.config.model.model_name}/model_optimizer.pt")
-            #       os.makedirs(f"checkpoints/{self.config.model.model_name}/", exist_ok = True)
-            #       torch.save({
-            #             'model_state_dict': self.model.state_dict(),
-            #             'optimizer_state_dict': self.optimizer.state_dict(),
-            #           }, f"checkpoints/{self.config.model.model_name}/model_optimizer.pt")
                 self.model.train()
 
     def evaluate(self, dataloader):
