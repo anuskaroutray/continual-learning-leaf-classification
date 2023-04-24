@@ -10,8 +10,10 @@ from src import BaselineModel
 import torch
 import torch.nn as nn
 
-from utils import class_incremental_dataset
+from utils import class_incremental_dataset, SoftTarget
 import numpy as np
+
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import copy
 
@@ -19,6 +21,7 @@ if __name__ == "__main__":
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--model-name", default = "resnet50", type = str)
+    ap.add_argument("--model-save-name", default = "Baseline_ResNet", type = str)
     ap.add_argument("--data-dir", default = "/home/sohan/scratch/deepherb/Medicinal Leaf Dataset/Segmented Medicinal Leaf Images", type = str)
     ap.add_argument("--num-classes", default = 30, type = int)
     ap.add_argument("--csv-name", default = "leaf-data.csv", type = str)
@@ -36,8 +39,8 @@ if __name__ == "__main__":
     ap.add_argument("--incremental-learning", default = True, type = bool)
     ap.add_argument('--num-base-classes', default = 15, type = int)
     ap.add_argument('--increment', default = 5, type = int)
-    ap.add_argument('--use-kldiv', default = False, type = bool)
-    ap.add_argument('--use-teacher', default = False, type = bool)
+    ap.add_argument('--use-kldiv', default = True, type = bool)
+    ap.add_argument('--use-teacher', default = True, type = bool)
 
     # data_dir, csv_name = None, num_classes = None
     args = ap.parse_args()
@@ -90,7 +93,7 @@ if __name__ == "__main__":
         
         criterion_kldiv = None
         if args.use_kldiv:
-            criterion_kldiv = nn.KLDivLoss(reduction = "batchmean")
+            criterion_kldiv = SoftTarget(T = 2)
 
         teacher_model = None
         trainer = Trainer(args, model, optimizer, criterion, device, criterion_kldiv = criterion_kldiv)
@@ -100,7 +103,7 @@ if __name__ == "__main__":
             print(f"Classes on which the model is being trained: {train_class_list[i]}")
             print(f"Classes on which the model is being evaluated: {test_class_list[i]}")
 
-            trainer.train(train_loader, teacher_model = teacher_model)
+            trainer.train(train_loader, teacher_model = teacher_model, known_classes = test_class_list)
 
             train_metrics = trainer.compute_metrics(train_loader)
             test_metrics = trainer.compute_metrics(test_loader)
@@ -112,4 +115,7 @@ if __name__ == "__main__":
                 for name, param in teacher_model.named_parameters():
                     param.requires_grad = False
 
-            trainer.args.epochs = 10    
+            trainer.args.epochs = 10
+            trainer.scheduler = CosineAnnealingLR(trainer.optimizer, trainer.args.epochs)
+
+    torch.save(model, f"./checkpoints/{args.model_save_name}.pth")

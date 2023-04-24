@@ -27,7 +27,7 @@ class Trainer():
 
         self.model.to(self.device)
 
-    def _train_step(self, dataloader, epoch, teacher_model = None):
+    def _train_step(self, dataloader, epoch, teacher_model = None, known_classes = None):
         
         total_loss = 0
         tepoch = tqdm(dataloader, unit="batch", position=0, leave=True)
@@ -40,7 +40,7 @@ class Trainer():
             loss = self.criterion(out, label.to(self.device))
             if self.args.incremental_learning and teacher_model is not None:
                 teacher_out = teacher_model(image.to(self.device))
-                loss += self.criterion_kldiv(out, teacher_out)
+                loss += 0.5 * self.criterion_kldiv(out[:, known_classes], teacher_out[:, known_classes])
 
             loss.backward()
 
@@ -52,7 +52,7 @@ class Trainer():
 
         return (total_loss / (batch_idx + 1))
     
-    def train(self, train_dataloader, val_dataloader = None, teacher_model = None):
+    def train(self, train_dataloader, val_dataloader = None, teacher_model = None, known_classes = None):
         self.model.train()
         for epoch in range(self.args.epochs):
             self._train_step(train_dataloader, epoch, teacher_model = teacher_model)
