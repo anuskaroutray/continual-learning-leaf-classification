@@ -18,7 +18,7 @@ class DeepHerbDataset(Dataset):
 
         self.data_dir = data_dir
 
-        class_dir_list = os.listdir(self.data_dir)
+        class_dir_list = sorted(os.listdir(self.data_dir))
 
         self.num_classes = len(class_dir_list)
 

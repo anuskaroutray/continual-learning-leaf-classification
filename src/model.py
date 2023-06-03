@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from torchvision.models import resnet50, vgg19, inception_v3, densenet121
+from torchvision.models import resnet50, vgg19, inception_v3, densenet121, googlenet
 
 class BaselineModel(nn.Module):
 
@@ -17,8 +17,8 @@ class BaselineModel(nn.Module):
             self.model.fc = nn.Linear(2048, self.num_classes, bias = True)
 
         elif self.model_name == "inceptionv3":
-            self.model = inception_v3(pretrained = self.pretrained)
-            self.model.fc = nn.Linear(2048, self.num_classes, bias = True)
+            self.model = googlenet(pretrained = self.pretrained)
+            self.model.fc = nn.Linear(1024, self.num_classes, bias = True)
 
         elif self.model_name == "vgg19":
             self.model = vgg19(pretrained = self.pretrained)
@@ -26,12 +26,7 @@ class BaselineModel(nn.Module):
         
         elif self.model_name == "densenet":
             self.model = densenet121(pretrained = self.pretrained)
-            self.classifier = nn.Linear(1024, self.num_classes, bias=True)
+            self.model.classifier = nn.Linear(1024, self.num_classes, bias=True)
 
-
-        # NOTE: Implement some more layers here later
-        
-    
     def forward(self, x):
-
         return self.model(x)

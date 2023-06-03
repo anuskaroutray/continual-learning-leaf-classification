@@ -20,8 +20,8 @@ import copy
 if __name__ == "__main__":
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model-name", default = "resnet50", type = str)
-    ap.add_argument("--model-save-name", default = "Baseline_ResNet", type = str)
+    ap.add_argument("--model-name", default = "inceptionv3", type = str)
+    ap.add_argument("--model-save-name", default = "Baseline_inceptionv3", type = str)
     ap.add_argument("--data-dir", default = "/home/sohan/scratch/deepherb/Medicinal Leaf Dataset/Segmented Medicinal Leaf Images", type = str)
     ap.add_argument("--num-classes", default = 30, type = int)
     ap.add_argument("--csv-name", default = "leaf-data.csv", type = str)
@@ -33,14 +33,14 @@ if __name__ == "__main__":
     ap.add_argument("--loss-function", default = "cross_entropy_loss", type = str)
     ap.add_argument("--num-workers", default = 1, type = int)
     ap.add_argument("--scheduler", default = "CosineAnnealingScheduler", type = str)
-    ap.add_argument("--epochs", default = 5, type = int)
+    ap.add_argument("--epochs", default = 10, type = int)
 
 
-    ap.add_argument("--incremental-learning", default = True, type = bool)
+    ap.add_argument("--incremental-learning", default = False, type = bool)
     ap.add_argument('--num-base-classes', default = 15, type = int)
     ap.add_argument('--increment', default = 5, type = int)
-    ap.add_argument('--use-kldiv', default = True, type = bool)
-    ap.add_argument('--use-teacher', default = True, type = bool)
+    ap.add_argument('--use-kldiv', default = False, type = bool)
+    ap.add_argument('--use-teacher', default = False, type = bool)
 
     # data_dir, csv_name = None, num_classes = None
     args = ap.parse_args()
@@ -55,8 +55,11 @@ if __name__ == "__main__":
     test_dataset = DeepHerbDataset(args.data_dir, num_classes = args.num_classes, mode = "test")
 
     model = BaselineModel(args.model_name, pretrained = args.pretrained, num_classes = args.num_classes)
+
+    print(model)
+    exit(0)
         
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
     optimizer = torch.optim.Adam(model.parameters(), lr = float(args.lr), weight_decay = float(args.weight_decay))
 
     if not args.incremental_learning:
@@ -69,7 +72,9 @@ if __name__ == "__main__":
             criterion = nn.CrossEntropyLoss()
 
         trainer = Trainer(args, model, optimizer, criterion, device)
-        trainer.train(train_dataloader)
+        trainer.train(train_dataloader, val_dataloader = test_dataloader)
+        trainer.plot_loss()
+        
         train_metrics = trainer.compute_metrics(train_dataloader)
         test_metrics = trainer.compute_metrics(test_dataloader)
         print(f"\nTrain metrics: {train_metrics}")
@@ -103,7 +108,10 @@ if __name__ == "__main__":
             print(f"Classes on which the model is being trained: {train_class_list[i]}")
             print(f"Classes on which the model is being evaluated: {test_class_list[i]}")
 
-            trainer.train(train_loader, teacher_model = teacher_model, known_classes = test_class_list)
+            trainer.train(train_loader, val_dataloader = test_loader, teacher_model = teacher_model, known_classes = test_class_list)
+            trainer.plot_loss(task = i+1)
+            trainer.train_loss_list = []
+            trainer.eval_loss_list = []
 
             train_metrics = trainer.compute_metrics(train_loader)
             test_metrics = trainer.compute_metrics(test_loader)
@@ -118,4 +126,4 @@ if __name__ == "__main__":
             trainer.args.epochs = 10
             trainer.scheduler = CosineAnnealingLR(trainer.optimizer, trainer.args.epochs)
 
-    torch.save(model, f"./checkpoints/{args.model_save_name}.pth")
+    torch.save(model.state_dict(), f"./checkpoints/{args.model_save_name}.pth")

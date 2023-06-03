@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import os
 from torch.optim.lr_scheduler import CosineAnnealingLR, MultiStepLR
 
-
+import matplotlib.pyplot as plt
 
 class Trainer():
 
@@ -26,6 +26,8 @@ class Trainer():
             self.scheduler = CosineAnnealingLR(self.optimizer, self.args.epochs)
 
         self.model.to(self.device)
+        self.train_loss_list = []
+        self.eval_loss_list = []
 
     def _train_step(self, dataloader, epoch, teacher_model = None, known_classes = None):
         
@@ -55,12 +57,14 @@ class Trainer():
     def train(self, train_dataloader, val_dataloader = None, teacher_model = None, known_classes = None):
         self.model.train()
         for epoch in range(self.args.epochs):
-            self._train_step(train_dataloader, epoch, teacher_model = teacher_model)
+            self.train_loss_list.append(self._train_step(train_dataloader, epoch, teacher_model = teacher_model))
 
             if self.scheduler is not None:
                 self.scheduler.step()
                 
                 self.model.train()
+
+            self.eval_loss_list.append(self.evaluate(val_dataloader))
 
     def evaluate(self, dataloader):
         self.model.eval()
@@ -75,7 +79,7 @@ class Trainer():
                 image, label = batch
                 out = self.model(image.to(self.device))
 
-                loss = self.criterion(out, batch["target"].to(self.device))
+                loss = self.criterion(out, label.to(self.device))
 
                 total_loss += loss.item()
                 tepoch.set_postfix(loss = total_loss / (batch_idx+1))
@@ -143,3 +147,18 @@ class Trainer():
         outputs = outputs.cpu().numpy().flatten()
         labels = labels.cpu().numpy().flatten()
         return f1_score(outputs, labels, average='micro')
+
+    def plot_loss(self, task = None):
+
+        plt.figure(figsize = (6, 5))
+        epochs = [i+1 for i in range(self.args.epochs)]
+        plt.plot(epochs, self.train_loss_list, label = "Train")
+        plt.plot(epochs, self.eval_loss_list, label = "Val")
+        plt.title(f"Variation of loss over number of epochs")
+        plt.xlabel("Number of Epochs")
+        plt.ylabel("Loss")
+        plt.legend()
+        save_name = self.args.model_save_name
+        if task is not None:
+            save_name += f"_task{task}"
+        plt.savefig(f"plots/{save_name}_loss.png")
